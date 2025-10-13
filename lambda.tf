@@ -4,6 +4,11 @@ locals {
     for obj in var.vpc_az_maps
     : replace(upper(obj.az), "-", "_") => join(",", obj.route_table_ids)
   }
+  nat_gateway_env_vars = {
+    # Map AZ to NAT Gateway ID for fallback routing
+    for obj in var.vpc_az_maps
+    : "${replace(upper(obj.az), "-", "_")}_NAT_GATEWAY_ID" => obj.nat_gateway_id
+  }
   has_ipv6_env_var = { "HAS_IPV6" = var.lambda_has_ipv6 }
   lambda_runtime   = "python3.12"
 }
@@ -37,6 +42,7 @@ resource "aws_lambda_function" "alternat_autoscaling_hook" {
   environment {
     variables = merge(
       local.autoscaling_func_env_vars,
+      local.nat_gateway_env_vars,
       { NAT_GATEWAY_ID = var.nat_gateway_id },
       var.lambda_environment_variables,
     )
@@ -159,6 +165,7 @@ resource "aws_lambda_function" "alternat_connectivity_tester" {
         PUBLIC_SUBNET_ID    = each.value.public_subnet_id
         CHECK_URLS          = join(",", var.connectivity_test_check_urls)
         NAT_GATEWAY_ID      = var.nat_gateway_id
+        AZ_NAT_GATEWAY_ID   = each.value.nat_gateway_id
         NAT_ASG_NAME        = aws_autoscaling_group.nat_instance[each.key].name
         ENABLE_NAT_RESTORE  = var.enable_nat_restore
       },

@@ -87,12 +87,29 @@ def get_vpc_id(route_table):
     return vpc_id
 
 
-def get_nat_gateway_id(vpc_id, subnet_id):
+def get_nat_gateway_id(vpc_id, subnet_id, availability_zone=None):
+    # First priority: Global NAT_GATEWAY_ID override
     nat_gateway_id = os.getenv("NAT_GATEWAY_ID")
     if nat_gateway_id:
-        logger.info("Using NAT_GATEWAY_ID env. variable (%s)", nat_gateway_id)
+        logger.info("Using global NAT_GATEWAY_ID env. variable (%s)", nat_gateway_id)
         return nat_gateway_id
+    
+    # Second priority: AZ-specific NAT Gateway ID from vpc_az_maps
+    if availability_zone:
+        az_env_var = f"{availability_zone.upper().replace('-', '_')}_NAT_GATEWAY_ID"
+        az_nat_gateway_id = os.getenv(az_env_var)
+        if az_nat_gateway_id:
+            logger.info("Using AZ-specific NAT Gateway ID (%s) from %s", az_nat_gateway_id, az_env_var)
+            return az_nat_gateway_id
+    
+    # Third priority: AZ_NAT_GATEWAY_ID for connectivity tester (per-AZ Lambda)
+    az_nat_gateway_id = os.getenv("AZ_NAT_GATEWAY_ID")
+    if az_nat_gateway_id:
+        logger.info("Using AZ_NAT_GATEWAY_ID env. variable (%s)", az_nat_gateway_id)
+        return az_nat_gateway_id
 
+    # Fallback: Auto-discover NAT Gateway in same subnet (legacy behavior)
+    logger.warning("No explicit NAT Gateway ID configured, falling back to auto-discovery")
     try:
         nat_gateways = ec2_client.describe_nat_gateways(
             Filters=[
@@ -403,7 +420,7 @@ def handler(event, _):
         raise MissingEnvironmentVariableError
     vpc_id = get_vpc_id(route_tables[0])
 
-    nat_gateway_id = get_nat_gateway_id(vpc_id, public_subnet_id)
+    nat_gateway_id = get_nat_gateway_id(vpc_id, public_subnet_id, availability_zone)
 
     for rtb in route_tables:
         replace_route(rtb, nat_gateway_id)

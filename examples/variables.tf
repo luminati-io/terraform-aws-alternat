@@ -10,12 +10,6 @@ variable "aws_region" {
   default     = "us-west-2"
 }
 
-variable "create_nat_gateways" {
-  description = "Whether to create NAT Gateways using the Alternat module."
-  type        = bool
-  default     = true
-}
-
 variable "enable_nat_gateway" {
   description = "Whether to create NAT Gateways using the VPC module."
   type        = bool

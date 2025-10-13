@@ -32,9 +32,9 @@ variable "autoscaling_hook_function_name" {
 }
 
 variable "create_nat_gateways" {
-  description = "Whether to create the NAT Gateway and the NAT Gateway EIP in this module. If false, you must create and manage NAT Gateways separately."
+  description = "Whether to create the NAT Gateway and the NAT Gateway EIP in this module. NAT Gateways must be managed externally and referenced via vpc_az_maps.nat_gateway_id."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "connectivity_test_check_urls" {
@@ -204,6 +204,7 @@ variable "vpc_az_maps" {
     private_subnet_ids = list(string)
     public_subnet_id   = string
     route_table_ids    = list(string)
+    nat_gateway_id     = string
   }))
 }
 

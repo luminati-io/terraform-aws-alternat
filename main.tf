@@ -478,6 +478,8 @@ resource "aws_eip" "nat_gateway_eips" {
   })
 }
 
+# Note: NAT Gateways are now managed externally and referenced via vpc_az_maps.nat_gateway_id
+# This resource is kept for backward compatibility when create_nat_gateways=true
 resource "aws_nat_gateway" "main" {
   for_each = {
     for obj in var.vpc_az_maps

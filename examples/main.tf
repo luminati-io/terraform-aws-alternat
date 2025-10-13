@@ -35,18 +35,25 @@ data "aws_subnet" "subnet" {
   id    = module.vpc.private_subnets[count.index]
 }
 
+# Example: NAT Gateway IDs must be provided externally
+# You should create NAT Gateways separately and reference their IDs here
 locals {
   vpc_az_maps = [
-    for index, rt in module.vpc.private_route_table_ids
-    : {
-      az               = local.azs[index]
-      route_table_ids  = [rt]
-      public_subnet_id = module.vpc.public_subnets[index]
-      # The secondary subnets do not need to be included here. this data is
-      # used for the connectivity test function and VPC endpoint which are
-      # only needed in one subnet per zone.
-      private_subnet_ids = [module.vpc.private_subnets[index]]
+    {
+      az                 = local.azs[0]
+      route_table_ids    = [module.vpc.private_route_table_ids[0]]
+      public_subnet_id   = module.vpc.public_subnets[0]
+      nat_gateway_id     = "nat-12345abcde"  # Replace with your actual NAT Gateway ID
+      private_subnet_ids = [module.vpc.private_subnets[0]]
+    },
+    {
+      az                 = local.azs[1]
+      route_table_ids    = [module.vpc.private_route_table_ids[1]]
+      public_subnet_id   = module.vpc.public_subnets[1]
+      nat_gateway_id     = "nat-67890fghij"  # Replace with your actual NAT Gateway ID
+      private_subnet_ids = [module.vpc.private_subnets[1]]
     }
+    # Add more AZs as needed, each with its own nat_gateway_id
   ]
 }
 
@@ -55,7 +62,7 @@ module "alternat" {
   # source = "chime/alternat/aws"
   source = "./.."
 
-  create_nat_gateways                = var.create_nat_gateways
+  create_nat_gateways                = false  # We create NAT Gateways externally
   ingress_security_group_cidr_blocks = var.private_subnets
   vpc_az_maps                        = local.vpc_az_maps
   vpc_id                             = module.vpc.vpc_id
